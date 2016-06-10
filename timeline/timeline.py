@@ -25,8 +25,8 @@ class Timeline(object):
         statistics = {}
 
         for entry in self.filter_by_date(start_date, end_date):
-            year_month = entry.get(self.date_key).strftime(compare_string)
-            stat = statistics[year_month] if statistics.get(year_month) else {}
+            date_pointer = entry.get(self.date_key).strftime(compare_string)
+            stat = statistics[date_pointer] if statistics.get(date_pointer) else {}
 
             for key in entry.keys():
                 if not isinstance(entry[key], datetime):
@@ -36,9 +36,9 @@ class Timeline(object):
                         stat[key][entry[key]] = 1 if entry[key] not in stat[key].keys() else stat[key][entry[key]] + 1
 
             # Save new/updated stat
-            statistics[year_month] = stat
+            statistics[date_pointer] = stat
 
-        # Returns dictionary with year_month keys. Each year_month contains a dictionary with data from that month
+        # Return a dictionary of keys of the format compare_string. for example: statistics['%Y%m'] where compare_string is '%Y%m' of a specified date
         return statistics
 
     # Obtain a subset of the data representing a certain time interval
@@ -55,6 +55,7 @@ class Timeline(object):
     def split_monthly(self, start_date=datetime.min, end_date=datetime.max):
         return self.__split_by(start_date, end_date, '%Y%m')
 
+    # Split data statistics by day. Search results by results['%Y%m%d']
     def split_daily(self, start_date=datetime.min, end_date=datetime.max):
         return self.__split_by(start_date, end_date, '%Y%m%d')
 
