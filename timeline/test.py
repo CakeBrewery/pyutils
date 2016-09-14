@@ -3,10 +3,6 @@ from timeline import Timeline
 import unittest
 
 
-'''
-Attempting to use unittest
-'''
-
 
 def get_timed_data(days=10, interval=1):
     time_pointer = datetime.now()
