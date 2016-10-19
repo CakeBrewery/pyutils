@@ -71,11 +71,22 @@ class FTPConnection(object):
             self._connection.close()  # Forcefully end connection
 
     @connection_required
+    def cwd(self, directory):
+        """ Change working directory.
+        Change working Directory
+        :param directory: The directory changing to, with the base_dir prefixed.
+        :return: The directory changed to.
+        """
+        new_dir = '{}/{}'.format(self._base_dir, directory)
+        self._connection.cwd(new_dir)
+        return new_dir
+
+    @connection_required
     def list(self):
         return self._connection.nlst()
 
     @connection_required
-    def upload_file(self, filename, contents):
+    def upload_file(self, filename, contents, directory=None):
         """
         Upload a file to FTP Server
         :param filename: Name of file to write.
@@ -84,6 +95,9 @@ class FTPConnection(object):
         """
         if not (filename and contents):
             raise ValueError('Need filename and contents')
+
+        if directory:  # Change to appropriate directory if specified
+            self.cwd(directory)
 
         # Temporary filename while storing to ensure no incomplete or halfway-written files get mistaken as batches
         filename_temp = '~{}.temp'.format(filename)
@@ -101,13 +115,21 @@ class FTPConnection(object):
             raise e
 
     @connection_required
-    def get_file(self, filename, dir=None):
-        if dir:
-            self._connection.cwd(dir)
+    def get_file(self, filename, directory=None):
+        if directory:  # Change to appropriate directory if specified
+            self.cwd(directory)
 
         if filename in self.list():
             file_ = io.BytesIO()
             self._connection.retrbinary('RETR {}'.format(filename), file_.write)
             file_.seek(0)
             return file_
+
+    @connection_required
+    def delete_file(self, filename, directory=None):
+        if directory:  # Change to appropriate directory if specified
+            self.cwd(directory)
+
+        # Delete file from FTP Server
+        self._connection.delete(filename)
 
