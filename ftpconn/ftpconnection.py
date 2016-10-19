@@ -16,7 +16,7 @@ def connection_required(f):
             else:
                 return f(self, *args, **kwargs)
         except Exception as e:
-            # Do something. Notify someone?
+            # TODO: Find a way to handle this.
             logging.error('{}: Something went wrong. Exception: {}'.format(f.__name__, e))
 
     return wrapper
