@@ -1,6 +1,5 @@
 import io
 import logging
-from StringIO import StringIO
 from ftplib import FTP, error_temp, error_perm, error_reply
 from functools import wraps
 
@@ -103,13 +102,11 @@ class FTPConnection(object):
         filename_temp = '~{}.temp'.format(filename)
 
         try:
-            file_ = StringIO(contents) if isinstance(contents, (str, basestring)) else contents
-            if file_:
-                self._connection.storbinary('STOR {}'.format(filename_temp), file_)  # Store with temporary name
-                self._connection.rename(filename_temp, filename)  # Once it's complete, give it back its original name
+            self._connection.storbinary('STOR {}'.format(filename_temp), contents)  # Store with temporary name
+            self._connection.rename(filename_temp, filename)  # Once it's complete, give it back its original name
 
-                if filename in self.list():
-                    return True
+            if filename in self.list():
+                return True
 
         except Exception as e:
             raise e

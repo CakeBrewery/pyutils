@@ -1,1 +1,1 @@
-from ftpconnection import FTPConnection
+from .ftpconnection import FTPConnection
