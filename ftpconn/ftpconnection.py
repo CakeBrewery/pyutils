@@ -98,7 +98,7 @@ class FTPConnection(object):
         if directory:  # Change to appropriate directory if specified
             self.cwd(directory)
 
-        # Temporary filename while storing to ensure no incomplete or halfway-written files get mistaken as batches
+        # Temporary filename while storing to ensure no incomplete or halfway-written files
         filename_temp = '~{}.temp'.format(filename)
 
         try:
