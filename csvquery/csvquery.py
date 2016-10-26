@@ -2,6 +2,7 @@ import itertools, csv
 
 
 class CSVQuery(object):
+    """ Query CSV files by their column values. For "small" CSV files when there's no SQLite available. """
 
     def __init__(self, filename, *args, **kwargs):
         self.filename = filename
@@ -11,8 +12,11 @@ class CSVQuery(object):
 
     def __matches_row(self, row, query=None):
         """Returns true if query parameters match row. False otherwise. """
+
+        # Allow querying through lower-case, space-ommited values, but default to un-normalized key.
         key_getter = { self.__normalize_key(key): key for (key) in row.keys() }
-        return all([row.get(key_getter.get(x)) == query[x] for x in query])
+
+        return all([row.get(key_getter.get(x, x)) == query[x] for x in query])
 
     def search(self, **kwargs):
         """
