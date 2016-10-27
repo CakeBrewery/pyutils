@@ -3,9 +3,13 @@ import decimal
 
 
 class QueryParameter(object):
-    """Generic query parameter class. Can be overwritten to allow more specific queries parameters. """
+    """ Generic query parameter class. Can be overwritten to allow more specific queries parameters. """
 
     def __init__(self, parameter):
+        """
+        Args:
+            parameter: Exact value to match or a function defining the conditions.
+        """
         self.parameter = parameter
 
     def match(self, value):
@@ -15,11 +19,19 @@ class QueryParameter(object):
         :param value: Value to evaluate with this function.
         :return: True or False
         """
+
+        # Allows functions to be passed as well.
+        if hasattr(self.parameter, '__call__'):
+            return self.parameter(value)
+
         return bool(value == self.parameter)
 
+    def __repr__(self):
+        return 'QueryParameter: {}'.format(self.parameter)
 
-# Creating custom query example:
-class DecimalQuery(QueryParameter):
+
+# Creating custom query parameter example:
+class DecimalParameter(QueryParameter):
     """ Search by decimal values. """
     def match(self, value):
         return decimal.Decimal(self.parameter) == decimal.Decimal(value)
@@ -43,7 +55,7 @@ class CSVQuery(object):
 
     def __matches_row(self, row, query=None):
         """Returns true if query parameters match row. False otherwise. """
-        
+
         # Allow querying through lower-case, space-ommited values, but default to un-normalized key.
         key_getter = { self.__normalize_key(key): key for (key) in row.keys() }
 
