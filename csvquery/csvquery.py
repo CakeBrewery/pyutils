@@ -1,4 +1,28 @@
-import itertools, csv
+import csv
+import decimal
+
+
+class QueryParameter(object):
+    """Generic query parameter class. Can be overwritten to allow more specific queries parameters. """
+
+    def __init__(self, parameter):
+        self.parameter = parameter
+
+    def match(self, value):
+        """
+        Decides whether value matches the query.
+        Overwrite this for custom query parameters.
+        :param value: Value to evaluate with this function.
+        :return: True or False
+        """
+        return bool(value == self.parameter)
+
+
+# Creating custom query example:
+class DecimalQuery(QueryParameter):
+    """ Search by decimal values. """
+    def match(self, value):
+        return decimal.Decimal(self.parameter) == decimal.Decimal(value)
 
 
 class CSVQuery(object):
@@ -10,13 +34,20 @@ class CSVQuery(object):
     def __normalize_key(self, parameter):
         return parameter.lower().strip().replace(' ', '').replace('/', '')
 
+    def __prepare_query(self, query):
+        for key in query.keys():
+            if not isinstance(query[key], QueryParameter):
+                query[key] = QueryParameter(query[key])
+
+        return query
+
     def __matches_row(self, row, query=None):
         """Returns true if query parameters match row. False otherwise. """
-
+        
         # Allow querying through lower-case, space-ommited values, but default to un-normalized key.
         key_getter = { self.__normalize_key(key): key for (key) in row.keys() }
 
-        return all([row.get(key_getter.get(x, x)) == query[x] for x in query])
+        return all([query[x].match(row.get(key_getter.get(x, x))) for x in query])
 
     def search(self, **kwargs):
         """
@@ -26,8 +57,7 @@ class CSVQuery(object):
         the csv file must remain open at all times for this to work.)
 
         To search for a specific column value, use lowercase and ommit spaces.
-        ie. csv_query.search(username='John') for a column named 'User Name'. I'm still not sure
-        what to do in the case of built-in names.
+        ie. csv_query.search(username='John') for a column named 'User Name'.
 
         Args:
             **kwargs: Column names and values to query.
@@ -37,4 +67,7 @@ class CSVQuery(object):
             reader = csv.DictReader(f)
             self.schema = reader.next()
 
-            return filter(lambda row: self.__matches_row(row, query=kwargs), reader)
+            # Make kwargs into QueryParameter objects
+            query = self.__prepare_query(kwargs)
+
+            return filter(lambda row: self.__matches_row(row, query=query), reader)
