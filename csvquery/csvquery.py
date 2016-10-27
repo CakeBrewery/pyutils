@@ -71,3 +71,14 @@ class CSVQuery(object):
             query = self.__prepare_query(kwargs)
 
             return filter(lambda row: self.__matches_row(row, query=query), reader)
+
+    def get(self, **kwargs):
+        """ Same as search but stops and returns the first match. """
+        with open(self.filename, 'rb') as f:
+            reader = csv.DictReader(f)
+            self.schema = reader.next()
+
+            # Make kwargs into QueryParameter objects
+            query = self.__prepare_query(kwargs)
+
+            return next(row for row in reader if self.__matches_row(row, query))
