@@ -21,7 +21,7 @@ class QueryParameter(object):
         """
 
         # Allows functions to be passed as well.
-        if hasattr(self.parameter, '__call__'):
+        if callable(self.parameter):
             return self.parameter(value)
 
         return bool(value == self.parameter)
@@ -59,15 +59,15 @@ class CSVQuery(object):
         # Allow querying through lower-case, space-ommited values, but default to un-normalized key.
         key_getter = { self.__normalize_key(key): key for (key) in row.keys() }
 
-        return all([query[x].match(row.get(key_getter.get(x, x))) for x in query])
+        for param in query:
+            if not query[param].match(row.get(key_getter.get(param, param))):
+                return False  # Return on first unmatched parameter.
+
+        return True  # All parameters matched
 
     def search(self, **kwargs):
         """
         Query contents of a CSV file based on parameters specified through keyword arguments.
-
-        Stores RESULTS in memory. (I tried implementing with itertools.filter to avoid this but
-        the csv file must remain open at all times for this to work.)
-
         To search for a specific column value, use lowercase and ommit spaces.
         ie. csv_query.search(username='John') for a column named 'User Name'.
 
