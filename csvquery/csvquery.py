@@ -30,7 +30,7 @@ class QueryParameter(object):
         return 'QueryParameter: {}'.format(self.parameter)
 
 
-# Creating custom query parameter example:
+# Creating custom query example:
 class DecimalParameter(QueryParameter):
     """ Search by decimal values. """
     def match(self, value):

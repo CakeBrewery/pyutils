@@ -2,6 +2,7 @@ import io
 import logging
 from ftplib import FTP, error_temp, error_perm, error_reply
 from functools import wraps
+from contextlib import contextmanager
 
 
 def connection_required(f):
@@ -25,7 +26,7 @@ class FTPConnection(object):
 
     def __init__(self, credentials, base_dir='/', *args, **kwargs):
         self.address, self.user, self.password = credentials
-        self._connection = FTP(self.address)
+        self._ftp = FTP(self.address)
         self._base_dir = base_dir
 
     def __enter__(self):
@@ -41,11 +42,11 @@ class FTPConnection(object):
         :return: Returns True if self.start() has been called. False otherwise.
             Sometimes pwd() returns AttributeError when connection is closed; Possible bug in ftplib.
         """
-        if not self._connection:
+        if not self._ftp:
             return False
 
         try:
-            self._connection.pwd()  # Quick way to confirm ftp access.
+            self._ftp.pwd()  # Quick way to confirm ftp access.
         except (error_temp, error_reply, error_perm, AttributeError) as e:
             return False
         return True
@@ -56,36 +57,34 @@ class FTPConnection(object):
             logging.warning('Warning: Aready connected. Calls to FTPConnection.start() more than once will be ignored unless the connection is stopped. ')
             return
 
-        self._connection.login(self.user, self.password)
-        self._connection.cwd(self._base_dir)
+        self._ftp.login(self.user, self.password)
+        self._ftp.cwd(self._base_dir)
 
     @connection_required
     def stop(self, force=True):
         """ Terminate connection with FTP server. """
         try:
-            self._connection.quit()  # Politely end connection
+            self._ftp.quit()  # Politely end connection
         except Exception as e:
             if not force:
                 raise e
-            self._connection.close()  # Forcefully end connection
+            self._ftp.close()  # Forcefully end connection
 
     @connection_required
-    def cwd(self, directory):
-        """ Change working directory.
-        Change working Directory
-        :param directory: The directory changing to, with the base_dir prefixed.
-        :return: The directory changed to.
-        """
-        new_dir = '{}/{}'.format(self._base_dir, directory)
-        self._connection.cwd(new_dir)
-        return new_dir
+    @contextmanager
+    def directory(self, directory=None):
+        wd = self._ftp.pwd()
+        if directory:
+            self._ftp.cwd(directory)
+        yield
+        self._ftp.cwd(wd)
 
     @connection_required
     def list(self):
-        return self._connection.nlst()
+        return self._ftp.nlst()
 
     @connection_required
-    def upload_file(self, filename, contents, directory=None):
+    def put_file(self, filename, contents):
         """
         Upload a file to FTP Server
         :param filename: Name of file to write.
@@ -95,38 +94,27 @@ class FTPConnection(object):
         if not (filename and contents):
             raise ValueError('Need filename and contents')
 
-        if directory:  # Change to appropriate directory if specified
-            self.cwd(directory)
+            # Temp. name to ensure half-written files don't get mistaken as full files.
+        temp_name = '~{}.temp'.format(filename)
 
-        # Temporary filename while storing to ensure no incomplete or halfway-written files
-        filename_temp = '~{}.temp'.format(filename)
+        # Store with temporary name
+        self._ftp.storbinary('STOR {}'.format(temp_name), contents)
 
-        try:
-            self._connection.storbinary('STOR {}'.format(filename_temp), contents)  # Store with temporary name
-            self._connection.rename(filename_temp, filename)  # Once it's complete, give it back its original name
-
-            if filename in self.list():
-                return True
-
-        except Exception as e:
-            raise e
-
-    @connection_required
-    def get_file(self, filename, directory=None):
-        if directory:  # Change to appropriate directory if specified
-            self.cwd(directory)
+        # Once it's complete, give it back its original name
+        self._ftp.rename(temp_name, filename)
 
         if filename in self.list():
+            return True
+
+    @connection_required
+    def get_file(self, filename):
+        if filename in self.list():
             file_ = io.BytesIO()
-            self._connection.retrbinary('RETR {}'.format(filename), file_.write)
+            self._ftp.retrbinary('RETR {}'.format(filename), file_.write)
             file_.seek(0)
             return file_
 
     @connection_required
-    def delete_file(self, filename, directory=None):
-        if directory:  # Change to appropriate directory if specified
-            self.cwd(directory)
-
+    def delete_file(self, filename):
         # Delete file from FTP Server
-        self._connection.delete(filename)
-
+        self._ftp.delete(filename)
