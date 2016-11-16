@@ -1,33 +1,35 @@
-import io
-import logging
+from StringIO import StringIO
+from contextlib import contextmanager
 from ftplib import FTP, error_temp, error_perm, error_reply
 from functools import wraps
-from contextlib import contextmanager
+
+
+class FTPConnError(Exception):
+    """ General FTP Connection exception """
+    def __init__(self, *args, **kwargs):
+        super(FTPConnError, self).__init__(*args, **kwargs)
 
 
 def connection_required(f):
-    """ Decorator for ensuring a connection before calling the wrapped method. """
+    """
+    Decorator for ensuring a connection before calling the wrapped method.
+    Re-raises internal exceptions as FTPConnError exceptions.
+    """
     @wraps(f)
     def wrapper(self, *args, **kwargs):
-        try:
-            if not self.connected():
-                logging.warning('{}: FTPConnection().start() has not been called. '.format(f.__name__))
-                return
-            else:
-                return f(self, *args, **kwargs)
-        except Exception as e:
-            # TODO: Find a way to handle this
-            logging.error('{}: Something went wrong. Exception: {}'.format(f.__name__, e))
+        if not self.connected():
+            raise FTPConnError('{}: Call LSIConnection().start().'.format(f.__name__))
+        else:
+            return f(self, *args, **kwargs)
 
     return wrapper
 
 
 class FTPConnection(object):
 
-    def __init__(self, credentials, base_dir='/', *args, **kwargs):
+    def __init__(self, credentials, *args, **kwargs):
         self.address, self.user, self.password = credentials
         self._ftp = FTP(self.address)
-        self._base_dir = base_dir
 
     def __enter__(self):
         self.start()
@@ -37,42 +39,34 @@ class FTPConnection(object):
         self.stop()
 
     def connected(self):
-        """
-        Check if a connection has been started.
-        :return: Returns True if self.start() has been called. False otherwise.
-            Sometimes pwd() returns AttributeError when connection is closed; Possible bug in ftplib.
-        """
+        """Returns True if self.start() has been called. False otherwise"""
         if not self._ftp:
             return False
 
         try:
-            self._ftp.pwd()  # Quick way to confirm ftp access.
+            self._ftp.pwd()  # Quick way to see if user is connected already.
         except (error_temp, error_reply, error_perm, AttributeError) as e:
+            # Sometimes raises AttributeError, might be an ftplib bug.
             return False
         return True
 
     def start(self):
-        """ Initiate connection and switch to base_dir. """
+        """
+        Call this before attempting to perform any
+        FTP action.
+        """
         if self.connected():
-            logging.warning('Warning: Aready connected. Calls to FTPConnection.start() more than once will be ignored unless the connection is stopped. ')
             return
 
         self._ftp.login(self.user, self.password)
-        self._ftp.cwd(self._base_dir)
-
-    @connection_required
-    def stop(self, force=True):
-        """ Terminate connection with FTP server. """
-        try:
-            self._ftp.quit()  # Politely end connection
-        except Exception as e:
-            if not force:
-                raise e
-            self._ftp.close()  # Forcefully end connection
 
     @connection_required
     @contextmanager
     def directory(self, directory=None):
+        """
+        Context manager for directory switching.
+        :param directory: Directory to switch to.
+        """
         wd = self._ftp.pwd()
         if directory:
             self._ftp.cwd(directory)
@@ -80,41 +74,64 @@ class FTPConnection(object):
         self._ftp.cwd(wd)
 
     @connection_required
-    def list(self):
-        return self._ftp.nlst()
+    def stop(self):
+        """
+        End FTP connection. Call this if when done if not using
+        the FTPConnection context manager.
+        """
+        try:
+            self._ftp.quit()  # Politely end connection
+        except Exception:
+            self._ftp.close()  # Forcefully end connection
 
     @connection_required
-    def put_file(self, filename, contents):
-        """
-        Upload a file to FTP Server
-        :param filename: Name of file to write.
-        :param contents: Contents of file to write. Can be String
-        :return: True if save succeeded
-        """
-        if not (filename and contents):
-            raise ValueError('Need filename and contents')
+    def get_files(self, ext=None):
+        """Check for certain file types in the LSI FTP Server"""
 
-            # Temp. name to ensure half-written files don't get mistaken as full files.
-        temp_name = '~{}.temp'.format(filename)
+        # Switch to appropriate directory
+        files = self.list()
 
-        # Store with temporary name
-        self._ftp.storbinary('STOR {}'.format(temp_name), contents)
+        if ext:
+            files = filter(lambda filename: filename.endswith(ext), files)
 
-        # Once it's complete, give it back its original name
-        self._ftp.rename(temp_name, filename)
+        files_ = []
+        for filename in files:
+            temp_buffer = StringIO()
+            self._ftp.retrbinary('RETR {}'.format(filename), temp_buffer.write)
+            files_.append({'File Name': filename, 'Contents': temp_buffer.getvalue()})
 
-        if filename in self.list():
-            return True
-
-    @connection_required
-    def get_file(self, filename):
-        if filename in self.list():
-            file_ = io.BytesIO()
-            self._ftp.retrbinary('RETR {}'.format(filename), file_.write)
-            file_.seek(0)
-            return file_
+        return files_
 
     @connection_required
     def delete_file(self, filename):
         # Delete file from FTP Server
         self._ftp.delete(filename)
+
+    @connection_required
+    def delete_files(self, filenames):
+        if isinstance(filenames, list):
+            for filename in filenames:
+                self.delete_file(filename)
+        else:
+            self.delete_file(filenames)
+
+    @connection_required
+    def list(self):
+        return self._ftp.nlst()
+
+    @connection_required
+    def put_file(self, filename, file_contents):
+        if file_contents is None or not filename:
+            raise ValueError('No file name or contents found.')
+
+        # Temp. name to ensure half-written files don't get mistaken as full files.
+        temp_name = '~{}.temp'.format(filename)
+
+        # Store with temporary name
+        self._ftp.storbinary('STOR {}'.format(temp_name), file_contents)
+
+        # Once it's complete, give it back its original name
+        self._ftp.rename(temp_name, filename)
+
+        if filename in self.list():  # "Assert" file is now in FTP server
+            return True
