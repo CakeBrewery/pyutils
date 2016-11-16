@@ -1,3 +1,4 @@
+import io
 from StringIO import StringIO
 from contextlib import contextmanager
 from ftplib import FTP, error_temp, error_perm, error_reply
@@ -101,6 +102,14 @@ class FTPConnection(object):
             files_.append({'File Name': filename, 'Contents': temp_buffer.getvalue()})
 
         return files_
+
+    @connection_required
+    def get_file(self, filename):
+        if filename in self.list():
+            file_ = io.BytesIO()
+            self._ftp.retrbinary('RETR {}'.format(filename), file_.write)
+            file_.seek(0)
+            return file_
 
     @connection_required
     def delete_file(self, filename):
