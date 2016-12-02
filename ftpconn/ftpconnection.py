@@ -3,6 +3,7 @@ from StringIO import StringIO
 from contextlib import contextmanager
 from ftplib import FTP, error_temp, error_perm, error_reply
 from functools import wraps
+import os
 
 
 class FTPConnError(Exception):
@@ -19,7 +20,7 @@ def connection_required(f):
     @wraps(f)
     def wrapper(self, *args, **kwargs):
         if not self.connected():
-            raise FTPConnError('{}: Call LSIConnection().start().'.format(f.__name__))
+            raise FTPConnError('{}: Call FTPConnection().start().'.format(f.__name__))
         else:
             return f(self, *args, **kwargs)
 
@@ -113,7 +114,7 @@ class FTPConnection(object):
 
     @connection_required
     def get_files(self, ext=None):
-        """Check for certain file types in the LSI FTP Server"""
+        """Check for certain file types in the FTP Server"""
 
         # Switch to appropriate directory
         files = self.list()
