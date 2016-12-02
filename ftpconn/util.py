@@ -3,16 +3,19 @@ from ftp_connection import FTPConnection, FTPConnError
 from StringIO import StringIO
 import time
 
+CREDENTIALS = ('HOST', 'Your User', 'Hunter2 #memeslol')
 
-def put_file(target_dir, filename, content):
+
+def put_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
     Use FTP to move a file to directory.
     :param target_dir: Directory to place file into
     :param filename:
     :param content:
+    :param credentials: FTP credentials as tuple(host, user, pw)
     :return: True if succeeded
     """
-    with FTPConnection(CREDENTIALS) as ctn:
+    with FTPConnection(credentials) as ctn:
         with ctn.directory(target_dir, make_dirs=True):
             return ctn.put_file(filename, StringIO(content))
 
