@@ -62,12 +62,38 @@ class FTPConnection(object):
         self._ftp.login(self.user, self.password)
 
     @connection_required
+    def _make_dirs(self, path):
+        """
+        Make all directories in path if
+            they don't exist.
+        :param path:
+        :return: path
+        """
+        wd = self._ftp.pwd()
+
+        dir_list = path.split(os.path.sep)
+        dir_iter = wd
+
+        for dir_ in dir_list:
+            dir_iter = os.path.join(dir_iter, dir_)
+
+            if dir_ not in self.list():
+                self._ftp.mkd(dir_iter)
+
+        return path
+
+    @connection_required
     @contextmanager
-    def directory(self, directory=None):
+    def directory(self, directory=None, make_dirs=False):
         """
         Context manager for directory switching.
         :param directory: Directory to switch to.
+        :param make_dirs: (bool) recursively make
+            directories if they don't exist.
         """
+        if make_dirs:
+            self._make_dirs(directory)
+
         wd = self._ftp.pwd()
         if directory:
             self._ftp.cwd(directory)
