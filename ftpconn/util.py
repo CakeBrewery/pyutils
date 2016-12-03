@@ -27,7 +27,6 @@ def sync_directory(path, target_dir):
     this avoids the '.' getting joined to FTP path.
     :param path: Path of dir to sync
     :param target_dir: Target location in FTP
-    :return: path if succeeded, None/False otherwise.
     """
     for root, dirs, files in os.walk(path):
         for file_ in files:
