@@ -22,7 +22,7 @@ def put_file(target_dir, filename, content, credentials=CREDENTIALS):
 
 def sync_directory(path, target_dir):
     """
-    Recursively sync directory in path, into FTP's target_dir.
+    Sync entire directory in path, into FTP's target_dir.
     Uses relative path when the path iterator is not the root;
     this avoids the '.' getting joined to FTP path.
     :param path: Path of dir to sync
