@@ -6,7 +6,7 @@ import time
 CREDENTIALS = ('HOST', 'Your User', 'Hunter2 #memeslol')
 
 
-def put_file(target_dir, filename, content, credentials=CREDENTIALS):
+def write_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
     Use FTP to move a file to directory.
     :param target_dir: Directory to place file into
