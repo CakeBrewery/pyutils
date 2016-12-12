@@ -6,7 +6,7 @@ import time
 CREDENTIALS = ('HOST', 'Your User', 'Hunter2 #memeslol')
 
 
-def put_file(target_dir, filename, content, credentials=CREDENTIALS):
+def write_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
     Use FTP to move a file to directory.
     :param target_dir: Directory to place file into
@@ -20,27 +20,21 @@ def put_file(target_dir, filename, content, credentials=CREDENTIALS):
             return ctn.put_file(filename, StringIO(content))
 
 
-def sync_directory(path, target_dir):
+def sync_directory(source, target):
     """
     Sync entire directory in path, into FTP's target_dir.
     Uses relative path when the path iterator is not the root;
     this avoids the '.' getting joined to FTP path.
-    :param path: Path of dir to sync
-    :param target_dir: Target location in FTP
+    :param source: Source directory to sync
+    :param target: Target location to sync to
     """
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(source):
         for file_ in files:
+            dir_ = target
+            if root != source:
+                dir_ = os.path.join(dir_, os.path.relpath(root, source))
 
-            # Give the server some chill
-            time.sleep(0.1)
+            time.sleep(0.1)  # Give the server some chill
+            with open(os.path.join(root, file_), 'rb') as f:
+                write_file(dir_, file_, f.read())
 
-            file_path = os.path.join(root, file_)
-
-            if root == path:
-                new_dir = target_dir
-            else:
-                rel = os.path.relpath(root, path)
-                new_dir = os.path.join(target_dir, rel)
-
-            with open(file_path, 'rb') as f:
-                put_file(new_dir, file_, f.read())
