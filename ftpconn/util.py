@@ -6,7 +6,7 @@ import time
 CREDENTIALS = ('HOST', 'Your User', 'Hunter2 #memeslol')
 
 
-def write_file(target_dir, filename, content, credentials=CREDENTIALS):
+def sync_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
     Use FTP to move a file to directory.
     :param target_dir: Directory to place file into
@@ -17,7 +17,7 @@ def write_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
     with FTPConnection(credentials) as ctn:
         with ctn.directory(target_dir, make_dirs=True):
-            return ctn.put_file(filename, StringIO(content))
+            return ctn.write_file(filename, StringIO(content))
 
 
 def sync_directory(source, target):
