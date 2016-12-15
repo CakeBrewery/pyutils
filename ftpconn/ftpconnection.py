@@ -156,7 +156,7 @@ class FTPConnection(object):
         return self._ftp.nlst()
 
     @connection_required
-    def put_file(self, filename, file_contents):
+    def write_file(self, filename, file_contents):
         """
         :param filename: Name of file to write.
         :param file_contents: "an open file object which is read until EOF"
