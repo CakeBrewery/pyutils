@@ -6,7 +6,7 @@ import time
 CREDENTIALS = ('HOST', 'Your User', 'Hunter2 #memeslol')
 
 
-def write_file(target_dir, filename, content, credentials=CREDENTIALS):
+def sync_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
     Use FTP to write contents of a file to a specified directory.
     :param target_dir: Directory to place file into
@@ -36,4 +36,4 @@ def sync_directory(source, target):
 
             time.sleep(0.1)  # Give the server some chill
             with open(os.path.join(root, file_), 'rb') as f:
-                write_file(dir_, file_, f)
+                sync_file(dir_, file_, f)
