@@ -161,7 +161,11 @@ class FTPConnection(object):
         :param filename: Name of file to write.
         :param file_contents: "an open file object which is read until EOF"
                                 - Python docs for ftplib.storbinary().
+                                Optionally accepts a string.
         """
+        if isinstance(file_contents, (str, basestring)):
+            file_contents = StringIO(file_contents)
+
         if file_contents is None or not filename:
             raise ValueError('No file name or contents found.')
 

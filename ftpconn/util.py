@@ -1,5 +1,5 @@
 import os
-from ftp_connection import FTPConnection, FTPConnError
+from ftpconn import FTPConnection
 from StringIO import StringIO
 import time
 
@@ -8,16 +8,16 @@ CREDENTIALS = ('HOST', 'Your User', 'Hunter2 #memeslol')
 
 def write_file(target_dir, filename, content, credentials=CREDENTIALS):
     """
-    Use FTP to move a file to directory.
+    Use FTP to write contents of a file to a specified directory.
     :param target_dir: Directory to place file into
-    :param filename:
-    :param content:
+    :param filename: Name for new file.
+    :param content: An open file or a string.
     :param credentials: FTP credentials as tuple(host, user, pw)
     :return: True if succeeded
     """
     with FTPConnection(credentials) as ctn:
         with ctn.directory(target_dir, make_dirs=True):
-            return ctn.put_file(filename, StringIO(content))
+            return ctn.put_file(filename, content)
 
 
 def sync_directory(source, target):
@@ -36,5 +36,4 @@ def sync_directory(source, target):
 
             time.sleep(0.1)  # Give the server some chill
             with open(os.path.join(root, file_), 'rb') as f:
-                write_file(dir_, file_, f.read())
-
+                write_file(dir_, file_, f)
